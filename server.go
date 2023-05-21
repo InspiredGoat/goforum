@@ -98,7 +98,7 @@ func user_from_authcode(authcode string) (User, error) {
 }
 
 func file_lines(filename string) []string {
-	a_bytes, _ := ioutil.ReadFile("accounts.csv")
+	a_bytes, _ := ioutil.ReadFile(filename)
 	a_string := string(a_bytes)
 	rows := strings.Split(a_string, "\n") // ignore header bit of the csv
 	rows = rows[0 : len(rows)-1]
@@ -260,21 +260,30 @@ type Post struct {
 	content string
 	id      string
 }
+type Comment struct {
+	id      string
+	author  string
+	content string
+}
 
 var posts []Post
 
 // quickly turn id into map
 var posts_ids_map map[string]int
 
-func post_load(filename string) {
+func posts_load(filename string) {
+	posts_ids_map = make(map[string]int)
 	lines := file_lines(filename)
 
-	posts := make([]Post, len(lines))
+	fmt.Println(lines)
+	posts = make([]Post, len(lines))
 
-	for i := 0; i < len(lines); i++ {
+	for i := 0; i < len(posts); i++ {
 		var post Post
 
 		cols := strings.SplitN(lines[i], ",", 4)
+		fmt.Println(cols[0])
+		fmt.Println(cols[1])
 
 		post.author = cols[0]
 		post.title = cols[1]
@@ -335,9 +344,46 @@ func posts_remove(post_id string) {
 
 	posts_write()
 }
-func posts_comment_add(author string, comment string) {
+func posts_comment_add(id string, author string, comment string) string {
+	f, _ := os.OpenFile("comments/"+id+".txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	comment_id := base64_random(20)
+
+	f.Write([]byte(comment_id + "," + author + "," + comment + "\n"))
+
+	f.Close()
+	return comment_id
 }
-func posts_comment_remove(author string, comment string) {
+func posts_comments_list(id string, author string, comment string) []Comment {
+	lines := file_lines("coments/" + id + ".txt")
+	comments := make([]Comment, len(lines))
+
+	for i := 0; i < len(lines); i++ {
+		cols := strings.SplitN(lines[i], ",", 3)
+
+		comments[i].id = cols[0]
+		comments[i].author = cols[1]
+		comments[i].content = cols[2]
+	}
+
+	return comments
+}
+
+func posts_comment_remove(post_id string, comment_id string, author string) {
+	lines := file_lines("comments/" + post_id + ".txt")
+	fmt.Println("trying to remove", comment_id)
+
+	newdata := ""
+	for i := 0; i < len(lines); i++ {
+		cols := strings.SplitN(lines[i], ",", 3)
+		c_id := cols[0]
+		c_a := cols[1]
+
+		if comment_id != c_id || c_a != author {
+			newdata += lines[i] + "\n"
+		}
+	}
+
+	ioutil.WriteFile("comments/"+post_id+".txt", []byte(newdata), 0666)
 }
 
 func main() {
@@ -353,11 +399,6 @@ func main() {
 	// user_add("luke", "1234", false, "")
 	// user_add("realluke", "theyhatedlukebecausehetoldthetruth", false, "")
 	// user_add("stevethebeast", "coldplay2007", false, "")
-
-	posts_add("First post lmao", "richard", "Here is my first post lalalallalalalallalallalalal")
-	posts_add("another one", "bob", "more text and stuff")
-
-	return
 
 	head, err := ioutil.ReadFile("templates/head.html")
 	if err != nil {
