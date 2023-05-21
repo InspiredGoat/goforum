@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="static/styles.css">
+    <script src="static/htmx.min.js"></script>
+    <title>  </title>
+</head>
+<body>
+    <main>
+
+        <!-- <p id="onhover1">Hellope</p> <p id="show1">Hellope</p> -->
+
+        <h2> Transcript: </h2>
+        <div id="trans-container" class="container" hx-get="/transcript" hx-trigger="every 1s"></div>
+        <br>
+
+        <div class="button" hx-get="/panic" hx-trigger="click" hx-target="#panic-answer"> Generate Suggestion </div>
+        <br>
+
+        <div id="panic-answer"></div>
+        <br>
+
+        <h2> Form Completion: </h2>
+
+        <div id="progress-bar" hx-get="/progress" hx-trigger="every 1s" hx-target="#progress-bar" hx-swap="innerHTML">
+            <div id="progress-bar-display" style="width: 0%;"></div>
+        </div>
+
+        <br>
+
+        <h2> Questions Missing: </h2>
+
+        <br>
+        <!-- <div id="trans-container" class="container" hx-get="/questions-missing" hx-trigger="every 1s"></div> -->
+        <div id="question-missing-container" hx-get="/questions-missing" hx-trigger="every 1s" class="container"></div>
+        <br>
+
+
+    </main>
+
+</body>
+</html>
