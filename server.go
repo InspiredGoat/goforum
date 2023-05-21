@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -100,14 +101,27 @@ func file_lines(filename string) []string {
 	a_bytes, _ := ioutil.ReadFile("accounts.csv")
 	a_string := string(a_bytes)
 	rows := strings.Split(a_string, "\n") // ignore header bit of the csv
-	rows = rows[1 : len(rows)-1]
+	rows = rows[0 : len(rows)-1]
 
 	return rows
 }
 
-// func users_list() []User {
+func users_list() []User {
+	lines := file_lines("accounts.csv")
 
-// }
+	users := make([]User, len(lines))
+	for i := 0; i < len(lines); i++ {
+		cols := strings.Split(lines[i], ",")
+
+		users[i].Name = cols[0]
+		users[i].IsAdmin = false
+		if cols[3] == "yes" {
+			users[i].IsAdmin = true
+		}
+	}
+
+	return users
+}
 
 func user_is_name_unique(new_name string) bool {
 	rows := file_lines("accounts.csv")
@@ -139,13 +153,19 @@ func user_add(username string, password string, is_admin bool, code string) {
 	f.Close()
 }
 
-func user_remove(username string) {
+func user_remove(username string, only_if_not_admin bool) {
 	lines := file_lines("accounts.csv")
 
 	newdata := ""
 	for i := 0; i < len(lines); i++ {
-		if strings.SplitN(lines[i], ",", 1)[0] != username {
-			newdata += lines[i]
+		cols := strings.Split(lines[i], ",")
+		row_name := cols[0]
+		fmt.Println("comparing: ", row_name, "and", username)
+
+		if cols[3] == "yes" && only_if_not_admin {
+			newdata += lines[i] + "\n"
+		} else if row_name != username {
+			newdata += lines[i] + "\n"
 		}
 	}
 
@@ -234,14 +254,110 @@ func regcode_remove(code string) {
 	ioutil.WriteFile("registercodes.txt", []byte(newdata), 0644)
 }
 
-func main() {
-	// regcode_add("lennoxisreal")
-	user_remove("richard")
+type Post struct {
+	title   string
+	author  string
+	content string
+	id      string
+}
 
-	_, err := user_login("richard", "password")
-	if err != nil {
-		fmt.Println(err)
+var posts []Post
+
+// quickly turn id into map
+var posts_ids_map map[string]int
+
+func post_load(filename string) {
+	lines := file_lines(filename)
+
+	posts := make([]Post, len(lines))
+
+	for i := 0; i < len(lines); i++ {
+		var post Post
+
+		cols := strings.SplitN(lines[i], ",", 4)
+
+		post.author = cols[0]
+		post.title = cols[1]
+		post.id = cols[2]
+		post.content = cols[3][1 : len(cols)-1]
+
+		posts[i] = post
+		posts_ids_map[post.id] = i
 	}
+}
+
+func posts_write() {
+	f, _ := os.OpenFile("posts.csv", os.O_CREATE|os.O_WRONLY, 0666)
+
+	for i := 0; i < len(posts); i++ {
+		post := posts[i]
+
+		f.Write([]byte(post.author + ","))
+		f.Write([]byte(post.title + ","))
+		f.Write([]byte(post.id + ","))
+		f.Write([]byte("\"" + post.content + "\"\n"))
+	}
+
+	f.Close()
+}
+
+func posts_add(title string, author string, content string) (post_id string) {
+	id := base64_random(12)
+	unique := false
+	for !unique {
+		unique = true
+		for i := 0; i < len(posts); i++ {
+			if id == posts[i].id {
+				unique = false
+			}
+		}
+	}
+
+	var post Post
+	post.author = author
+	post.title = title
+	post.content = content
+	post.id = id
+	posts = append(posts, post)
+
+	posts_write()
+
+	return id
+}
+func posts_remove(post_id string) {
+	index := posts_ids_map[post_id]
+
+	// remove from array
+	posts = append(posts[:index], posts[index+1:]...)
+
+	// remove from map
+	delete(posts_ids_map, post_id)
+
+	posts_write()
+}
+func posts_comment_add(author string, comment string) {
+}
+func posts_comment_remove(author string, comment string) {
+}
+
+func main() {
+	// this ensures only 1 physical cpu being used, prevents race conditions
+	runtime.GOMAXPROCS(1)
+
+	// regcode_add("lennoxisreal")
+	// user_add("bob", "password", true, "")
+	// user_add("seriousadmin", "yolo", true, "")
+	// user_add("janitor", "incorrect", true, "")
+	// user_add("alice", "realAlice", false, "")
+	// user_add("john", "6969", false, "")
+	// user_add("luke", "1234", false, "")
+	// user_add("realluke", "theyhatedlukebecausehetoldthetruth", false, "")
+	// user_add("stevethebeast", "coldplay2007", false, "")
+
+	posts_add("First post lmao", "richard", "Here is my first post lalalallalalalallalallalalal")
+	posts_add("another one", "bob", "more text and stuff")
+
+	return
 
 	head, err := ioutil.ReadFile("templates/head.html")
 	if err != nil {
@@ -274,6 +390,15 @@ func main() {
 		enableCors(&w)
 
 		body, _ := ioutil.ReadFile("templates/about.html")
+		w.Write(head)
+		w.Write(body)
+		w.Write(tail)
+	})
+
+	http.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+
+		body, _ := ioutil.ReadFile("templates/admin.html")
 		w.Write(head)
 		w.Write(body)
 		w.Write(tail)
@@ -386,6 +511,19 @@ func main() {
 			w.Write(tail)
 		}
 	})
+	http.HandleFunc("/deluser", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+
+		authcode := authcode_from_request(r)
+		user, err := user_from_authcode(authcode)
+
+		// make sure it's an admin
+		if err == nil && user.IsAdmin {
+			r.ParseForm()
+			username := r.Form.Get("name")
+			user_remove(username, true)
+		}
+	})
 	http.HandleFunc("/ui-admintable", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 
@@ -395,15 +533,26 @@ func main() {
 		// check credentials
 		if err == nil && user.IsAdmin {
 			// show fellow admins just for kicks
+			users := users_list()
+
+			fmt.Fprintf(w, "<p> Fellow admins :) </p>")
 			fmt.Fprintf(w, "<ul>")
+			for i := 0; i < len(users); i++ {
+				if users[i].IsAdmin {
+					fmt.Fprintf(w, "<li> "+users[i].Name+" </li>")
+				}
+			}
 			fmt.Fprintf(w, "</ul>")
 
+			fmt.Fprintf(w, "<p> Regular users: </p>")
 			fmt.Fprintf(w, "<ul>")
 			// list every non admin user, for deletion
 
-			// for i := 0; i < len(); i++ {
-			// 	fmt.Fprintf(w, "<li> <div class=\"x\" hx-trigger=\"click\" hx-post=\"/deluser?"+name+"\" hx-confirm=\"Are you sure you want to delete this user and all their posts?\"></div> </li>")
-			// }
+			for i := 0; i < len(users); i++ {
+				if !users[i].IsAdmin {
+					fmt.Fprintf(w, "<li id=\"userline\"> "+users[i].Name+"<div class=\"x\" hx-trigger=\"click\" hx-target=\"closest #userline\" hx-swap=\"outerHTML\" hx-post=\"/deluser?name="+users[i].Name+"\" hx-confirm=\"Are you sure you want to delete this user and all their posts?\"><b>X</b></div> </li>")
+				}
+			}
 			fmt.Fprintf(w, "</ul>")
 		}
 	})
