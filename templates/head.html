@@ -2,11 +2,24 @@
 <html>
 <head>
 	<title> SpaceRamen </title>
-	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="/static/styles.css">
+    <script src="static/htmx.min.js"></script>
 	<meta charset="utf-8">
+	<!-- TODO: remove this junk -->
 	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, width=device-width, user-scalable=no" />
 	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, width=device-width, user-scalable=no" />
 </head>
 
 <body>
 <main>
+<div id="nav"> 
+    <a href="/" class="nav-item">HOME</a>
+    <a href="/about" class="nav-item">ABOUT</a>
+    <!-- search bar -->
+    <input type="text" id="searchbar" placeholder="Search through posts!"></input>
+
+    <!-- TODO: dynamically load this -->
+    <!-- <a href="/login" class="nav-item">LOGIN</a> -->
+    <div hx-trigger="load" hx-get="ui-loginbutton"></div>
+</div>
+
