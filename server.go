@@ -12,6 +12,19 @@ import (
 	"time"
 )
 
+func get_authcode(r *http.Request) string {
+	cookies := r.Cookies()
+	var authcode string
+	for i := 0; i < len(cookies); i++ {
+		if cookies[i].Name == "authcode" {
+			fmt.Println(cookies[i].Value)
+			authcode = cookies[i].Value
+		}
+	}
+
+	return authcode
+}
+
 // TODO: check this makes sense to have
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
@@ -152,6 +165,8 @@ func main() {
 		fmt.Println("no tail file!")
 	}
 
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 
@@ -179,37 +194,11 @@ func main() {
 		w.Write(tail)
 	})
 
-	http.HandleFunc("/ui-loginbutton", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
-		cookies := r.Cookies()
-
-		var authcode string
-		for i := 0; i < len(cookies); i++ {
-			if cookies[i].Name == "authcode" {
-				fmt.Print("Found authcode in request: ")
-				fmt.Println(cookies[i].Value)
-				authcode = cookies[i].Value
-				fmt.Println("finsihed printing")
-			}
-		}
-
-		user, err := get_user_from_authcode(authcode)
-		fmt.Println("Request with authcode:", authcode)
-		if err != nil {
-			fmt.Fprintf(w, "<a href=\"/login\" class=\"nav-item\">LOGIN</a>")
-		} else if user.IsAdmin {
-			fmt.Fprintf(w, "<a href=\"/admin\" class=\"nav-item\">ADMIN</a>")
-		}
-	})
-
 	http.HandleFunc("/logintry", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 
-		// body, _ := ioutil.ReadFile("templates/login.html")
-
-		// w.Write(head)
-		// w.Write(body)
-		// w.Write(tail)
+		success_page, _ := ioutil.ReadFile("templates/success.html")
+		fail_page, _ := ioutil.ReadFile("templates/fail.html")
 
 		r.ParseForm()
 		username := r.PostForm.Get("username")
@@ -218,21 +207,70 @@ func main() {
 		user, err := user_login(username, password)
 
 		if err != nil {
-			fmt.Fprint(w, err)
+			w.Write(fail_page)
 		} else {
 			// if logged in send cookie
 			c := http.Cookie{Name: "authcode", Value: user.Authcode, Expires: time.Now().Add(6 * time.Hour)}
+			c.SameSite = http.SameSiteStrictMode
 			http.SetCookie(w, &c)
-			fmt.Println("set cookies")
-			fmt.Println(user.Authcode)
 			active_users = append(active_users, user)
-			fmt.Fprintln(w, "success check cookies")
+
+			// show succesful login page
+			// fmt.Fprintln(w, "success check cookies")
+			w.Write(success_page)
+		}
+	})
+	http.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+
+		authcode := get_authcode(r)
+		user, err := get_user_from_authcode(authcode)
+
+		if err != nil {
+			// invalid but not possible in ui so do nothing
+		} else {
+			// user is logged in and wants to sign out
+
+			c := http.Cookie{Name: "authcode", Value: "", Expires: time.Now().Add(6 * time.Hour)}
+			c.SameSite = http.SameSiteStrictMode
+			http.SetCookie(w, &c)
+
+			for i := 0; i < len(active_users); i++ {
+				u := active_users[i]
+				if u == user {
+					// replace current user with last user
+					active_users[i] = active_users[len(active_users)-1]
+
+					// remove the last user "deleting" it from array
+					active_users = active_users[:len(active_users)-1]
+
+					break
+				}
+			}
+
+			body, _ := ioutil.ReadFile("templates/index.html")
+			w.Write(head)
+			w.Write(body)
+			w.Write(tail)
+		}
+	})
+	http.HandleFunc("/ui-loginbutton", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+
+		authcode := get_authcode(r)
+		user, err := get_user_from_authcode(authcode)
+
+		if err != nil {
+			fmt.Fprintf(w, "<a href=\"/login\" class=\"nav-item\">LOGIN</a>")
+		} else {
+			if user.IsAdmin {
+				fmt.Fprintf(w, "<a href=\"/admin\" class=\"nav-item\">ADMIN</a>")
+			}
+			fmt.Fprintf(w, "<a href=\"/logout\" class=\"nav-item\">LOGOUT</a>")
 		}
 	})
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-
-	var port = "9696"
+	port := "9696"
 	fmt.Println("Starting server...\n\tPort:\t\t", port, "\n\tUnix time:\t", time.Now().Unix())
 
 	err = http.ListenAndServeTLS(":"+string(port), "certs/cert.pem", "certs/key.pem", nil)

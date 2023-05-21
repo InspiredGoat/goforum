@@ -1,9 +1,9 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-	<title> SpaceRamen </title>
+	<title> UniShare </title>
 	<link rel="stylesheet" href="/static/styles.css">
-    <script src="static/htmx.min.js"></script>
+    <script src="/static/htmx.min.js"></script>
 	<meta charset="utf-8">
 	<!-- TODO: remove this junk -->
 	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, width=device-width, user-scalable=no" />
@@ -20,6 +20,6 @@
 
     <!-- TODO: dynamically load this -->
     <!-- <a href="/login" class="nav-item">LOGIN</a> -->
-    <div hx-trigger="load" hx-get="ui-loginbutton"></div>
+    <div hx-trigger="load" hx-get="/ui-loginbutton"></div>
 </div>
 
