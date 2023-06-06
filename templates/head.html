@@ -12,14 +12,29 @@
 
 <body>
 <main>
+
 <div id="nav"> 
     <a href="/" class="nav-item">HOME</a>
     <a href="/about" class="nav-item">ABOUT</a>
     <!-- search bar -->
-    <input type="text" id="searchbar" placeholder="Search through posts!"></input>
+    <input 
+        type="search" 
+        id="searchbar" 
+        placeholder="Search through posts!"
+        hx-get="/ui-search"
+        name="query"
+        hx-swap="outerHTML"
+        hx-trigger="keyup changed delay:100ms, search"
+        hx-target="#content"
+    />
 
-    <!-- TODO: dynamically load this -->
-    <!-- <a href="/login" class="nav-item">LOGIN</a> -->
-    <div hx-trigger="load" hx-get="/ui-loginbutton" hx-swap="outerHTML"></div>
+    {{ if eq .Name "" }}
+        <a href="/login" class="nav-item">LOGIN/REGISTER</a>
+    {{ else }}
+        {{ if .IsAdmin }}
+            <a href="/admin" class="nav-item">ADMIN</a>
+        {{ end }}
+         <a href="/logout" class="nav-item">LOGOUT</a>
+    {{ end }}
 </div>
 
