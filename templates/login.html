@@ -1,0 +1,29 @@
+<div id="content">
+    <h3> Login: </h3>
+    <br>
+
+    <form action="/logintry" method="post">
+        <input type="text" name="username" placeholder="Username"></input>
+        <br>
+        <br>
+        <input type="password" name="password" placeholder="Password"></input>
+        <input type="submit" value="login"></input>
+    </form>
+
+    <hr>
+
+    <br>
+    <h3> Register below: </h3>
+    <br>
+    <form action="/register" method="post">
+        <input type="text" minlength=3 maxlength=20 name="username" placeholder="Choose a username"></input>
+        <br>
+        <br>
+        <input type="text" minlength=16 maxlength=16 name="code" placeholder="16 digit Authcode"></input>
+        <p> New password: </p>
+        <input type="password" minlength=3 maxlength=40 name="password1" placeholder="Password"></input>
+        <input type="password" minlength=3 maxlength=40 name="password2" placeholder="Re-enter Password"></input>
+        <input type="submit" value="register"></input>
+    </form>
+</div>
+

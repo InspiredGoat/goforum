@@ -1,0 +1,27 @@
+<div id="content">
+
+<h1> {{ .PData.DisplayTitle }} </h1>
+<p> by <i>{{ .PData.Author }}</i> </p>
+<p> {{ .Content }} </p>
+
+<!-- load options if user / admin -->
+<div hx-get="/ui-controls?id={{ .PData.Id }}" hx-trigger="load"></div>
+
+<!-- <a href="">delete  post</a> -->
+<!-- <a href="">archive post</a> -->
+
+<hr>
+
+<div id="comment-container" hx-get="/ui-comments?id={{ .PData.Id }}" hx-trigger="load, every 3s"></div>
+    <!-- comments -->
+    <!-- <div class="container"> <b> John: </b> this is an example comment. </div> -->
+    <!-- <div class="container"> <b> Bob: </b> another example. </div> -->
+
+<hr>
+
+<div id="commentbox-container" hx-get="/ui-commentbox?id={{ .PData.Id }}" hx-trigger="load"></div>
+
+</div>
+
+
+</div>

@@ -1,0 +1,12 @@
+<html>
+    <head>
+	<link rel="stylesheet" href="/static/styles.css">
+    <script src="static/htmx.min.js"></script>
+    </head>
+<div id="content" hx-swap="outerHTML" hx-get="/login" hx-push-url="/login" hx-trigger="load delay:1500ms">
+    <div  hx-push-url="/">
+    <center>
+        <h1> {{ . }} </h1>
+    </center>
+</div>
+</html>

@@ -1,0 +1,25 @@
+<!-- <div id="content" hx-get="/ui-postpreviews" hx-trigger="load"> -->
+
+<!-- </div> -->
+
+<div id="content">
+    {{ range . }}
+        
+    <a href="/posts/{{ .Id }}" class="post" hx->
+        <div class="post-title">
+            {{ .DisplayTitle }}
+        </div>
+        <div class="post-author">
+            {{ .Author }}
+        </div>
+        <div class="post-preview">
+            {{ .Content }}
+        </div>
+    </a>
+
+    {{ end }}
+
+    <div hx-swap="outerHTML" hx-get="ui-postbutton" hx-trigger="load"></div>
+</div>
+
+
